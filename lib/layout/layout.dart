@@ -25,6 +25,7 @@ class _MainLayoutState extends State<MainLayout> {
   final List<String> _routes = [
     '/home',
     '/profile',
+    '/emergency'
   ];
 
   @override
@@ -90,6 +91,19 @@ class _MainLayoutState extends State<MainLayout> {
               size: 26,
             ),
             label: 'Profil',
+            labelStyle: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          CurvedNavigationBarItem(
+            child: const Icon(
+              Icons.emergency_outlined,
+              color: Colors.white,
+              size: 26,
+            ),
+            label: 'Emergency',
             labelStyle: const TextStyle(
               color: Colors.white,
               fontSize: 12,

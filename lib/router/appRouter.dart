@@ -1,3 +1,4 @@
+import 'package:bencanaku/Landing/emergency.dart';
 import 'package:bencanaku/Landing/home.dart';
 import 'package:bencanaku/Landing/profile.dart';
 import 'package:bencanaku/layout/layout.dart';
@@ -64,6 +65,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/profile',
           builder: (context, state) => const ProfilePage(),
+        ),
+        GoRoute(
+          path: '/emergency',
+          builder: (context, state) => const EmergencyPage(),
         ),
       ],
     ),
