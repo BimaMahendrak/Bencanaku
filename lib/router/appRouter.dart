@@ -1,6 +1,7 @@
 import 'package:bencanaku/Landing/emergency.dart';
 import 'package:bencanaku/Landing/home.dart';
 import 'package:bencanaku/Landing/profile.dart';
+import 'package:bencanaku/Landing/currency.dart';
 import 'package:bencanaku/layout/layout.dart';
 import 'package:go_router/go_router.dart';
 import '../Auntentikasi/login.dart';
@@ -69,6 +70,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/emergency',
           builder: (context, state) => const EmergencyPage(),
+        ),
+        GoRoute(
+          path: '/currency',
+          builder: (context, state) => const CurrencyPage(),
         ),
       ],
     ),

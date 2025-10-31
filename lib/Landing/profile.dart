@@ -380,7 +380,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Helper function untuk build profile image dengan error handling
+  // function untuk build profile image dengan error handling
   ImageProvider? _buildProfileImage() {
     final photoUrl = userData?['url_foto'];
     if (photoUrl != null && photoUrl.toString().isNotEmpty) {
@@ -389,7 +389,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return null;
   }
 
-  // Helper function untuk build profile icon
+  // function untuk build profile icon
   Widget? _buildProfileIcon() {
     final photoUrl = userData?['url_foto'];
     if (photoUrl == null || photoUrl.toString().isEmpty) {
@@ -398,7 +398,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return null;
   }
 
-  // Helper function untuk cek apakah ada foto profile
+  // function untuk cek apakah ada foto profile
   bool _hasProfilePhoto() {
     final photoUrl = userData?['url_foto'];
     return photoUrl != null && photoUrl.toString().isNotEmpty;
@@ -411,11 +411,11 @@ class _ProfilePageState extends State<ProfilePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 80,
+            width: 100,
             child: Text(
               label,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 14,
                 color: Color(0xFF7F8C8D),
                 fontWeight: FontWeight.w500,
               ),
@@ -426,7 +426,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Text(
               value,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 14,
                 color: Color(0xFF2C3E50),
                 fontWeight: FontWeight.w500,
               ),
