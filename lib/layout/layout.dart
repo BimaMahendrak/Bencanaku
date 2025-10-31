@@ -27,6 +27,7 @@ class _MainLayoutState extends State<MainLayout> {
     '/profile',
     '/emergency',
     '/currency',
+    '/notifications',
   ];
 
   @override
@@ -65,7 +66,7 @@ class _MainLayoutState extends State<MainLayout> {
       bottomNavigationBar: CurvedNavigationBar(
         key: _bottomNavigationKey,
         index: _currentIndex,
-        height: 65,
+        height: 80,
         backgroundColor: const Color(0xFFF5F7FA),
         color: const Color(0xFF6BB6FF),
         buttonBackgroundColor: const Color(0xFF5DADE2),

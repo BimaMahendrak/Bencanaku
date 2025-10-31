@@ -1,5 +1,6 @@
 import 'package:bencanaku/Landing/emergency.dart';
 import 'package:bencanaku/Landing/home.dart';
+import 'package:bencanaku/Landing/notificationTest.dart';
 import 'package:bencanaku/Landing/profile.dart';
 import 'package:bencanaku/Landing/currency.dart';
 import 'package:bencanaku/layout/layout.dart';
@@ -74,6 +75,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/currency',
           builder: (context, state) => const CurrencyPage(),
+        ),
+        GoRoute(
+          path: '/notifications',
+          builder: (context, state) => const NotificationTestPage(),
         ),
       ],
     ),

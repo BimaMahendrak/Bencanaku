@@ -26,6 +26,7 @@ dependencies:
   intl: ^0.20.2
   timezone: ^0.10.1
   image_picker: ^1.2.0
+  awesome_notifications: ^0.10.1
 
 dev_dependencies:
   flutter_test:
