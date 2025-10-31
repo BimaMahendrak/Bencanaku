@@ -14,65 +14,62 @@ class _ProfilePageState extends State<ProfilePage> {
   String? username;
   Map<String, dynamic>? userData;
 
+  final ProfileController _profileController = ProfileController();
+  final ValueNotifier<bool> _isUploading = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _isRefreshing = ValueNotifier<bool>(false);
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
   }
 
+  // Update fungsi _loadUserData untuk mengambil data terbaru dari server
   Future<void> _loadUserData() async {
-    final user = await SessionService.getUsername();
-    final data = await SessionService.getUserData();
-    
-    setState(() {
-      username = user;
-      userData = data;
-    });
-    
-    print('Loaded user data: $userData');
+    _isRefreshing.value = true;
+
+    try {
+      // Ambil username dari session
+      final user = await SessionService.getUsername();
+
+      // Ambil data terbaru dari server melalui ProfileController
+      final freshUserData = await _profileController.getUserData();
+
+      setState(() {
+        username = user;
+        userData = freshUserData;
+      });
+
+      print('Loaded user data: $userData');
+      print('Photo URL: ${userData?['url_foto']}');
+    } catch (e) {
+      print('Error loading user data: $e');
+
+      // Fallback ke session data jika error
+      final sessionData = await SessionService.getUserData();
+      setState(() {
+        userData = sessionData;
+      });
+    } finally {
+      _isRefreshing.value = false;
+    }
   }
 
-  Future<void> _showLogoutDialog() async {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Apakah Anda yakin ingin logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _handleLogout();
-            },
-            child: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Update fungsi _handleUploadPhoto untuk refresh setelah upload
+  Future<void> _handleUploadPhoto() async {
+    final success = await _profileController.uploadPhoto(context, _isUploading);
 
-  Future<void> _handleLogout() async {
-    final loginController = LoginController();
-    await loginController.handleLogout(context);
-  }
+    if (success) {
+      // Refresh data setelah upload berhasil
+      await _loadUserData();
 
-  void _navigateToEditProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditProfilePage(userData: userData),
-      ),
-    ).then((_) {
-      // Refresh data setelah kembali dari edit
-      _loadUserData();
-    });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Foto profile berhasil diupload!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   @override
@@ -80,187 +77,331 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Profile',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C3E50),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _navigateToEditProfile,
-                    icon: const Icon(
-                      Icons.edit,
-                      color: Color(0xFF6BB6FF),
-                      size: 28,
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 30),
-
-              // Profile Card
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
+        child: RefreshIndicator(
+          onRefresh: _loadUserData, // Tambahkan pull to refresh
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                // Header dengan refresh indicator
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Stack(
-                      children: [
-                        const CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Color(0xFF6BB6FF),
-                          child: Icon(
-                            Icons.person,
-                            size: 60,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF27AE60),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      userData?['nama_lengkap'] ?? username ?? 'Loading...',
-                      style: const TextStyle(
-                        fontSize: 20,
+                    const Text(
+                      'Profile',
+                      style: TextStyle(
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF2C3E50),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '@${username ?? 'loading'}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF7F8C8D),
-                      ),
-                    ),
-                    if (userData != null) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8F9FA),
-                          borderRadius: BorderRadius.circular(8),
+                    Row(
+                      children: [
+                        // Refresh button
+                        ValueListenableBuilder<bool>(
+                          valueListenable: _isRefreshing,
+                          builder: (context, isRefreshing, child) {
+                            return IconButton(
+                              onPressed: isRefreshing ? null : _loadUserData,
+                              icon: isRefreshing
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.refresh,
+                                      color: Color(0xFF6BB6FF),
+                                      size: 28,
+                                    ),
+                            );
+                          },
                         ),
-                        child: Column(
+                        IconButton(
+                          onPressed: _navigateToEditProfile,
+                          icon: const Icon(
+                            Icons.edit,
+                            color: Color(0xFF6BB6FF),
+                            size: 28,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 30),
+
+                // Profile Card dengan foto yang diperbarui
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Stack(
+                        children: [
+                          // CircleAvatar dengan error handling untuk foto
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundColor: const Color(0xFF6BB6FF),
+                            backgroundImage: _buildProfileImage(),
+                            child: _buildProfileIcon(),
+                          ),
+
+                          // Tombol kamera untuk upload foto
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: _handleUploadPhoto,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF6BB6FF),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: ValueListenableBuilder<bool>(
+                                  valueListenable: _isUploading,
+                                  builder: (context, isUploading, child) {
+                                    return isUploading
+                                        ? const SizedBox(
+                                            height: 16,
+                                            width: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    Colors.white,
+                                                  ),
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.camera_alt,
+                                            size: 16,
+                                            color: Colors.white,
+                                          );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      Text(
+                        userData?['nama_lengkap'] ?? username ?? 'Loading...',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      Text(
+                        '@${username ?? 'loading'}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF7F8C8D),
+                        ),
+                      ),
+
+                      // Tambahkan status foto
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _hasProfilePhoto()
+                              ? const Color(0xFFE8F5E8)
+                              : const Color(0xFFFFF3E0),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            _buildInfoRow('User ID', userData!['id'].toString()),
-                            _buildInfoRow('Username', userData!['username']),
-                            _buildInfoRow('Bergabung', _formatDate(userData!['created_at'])),
+                            Icon(
+                              _hasProfilePhoto()
+                                  ? Icons.check_circle
+                                  : Icons.photo_camera,
+                              size: 14,
+                              color: _hasProfilePhoto()
+                                  ? const Color(0xFF4CAF50)
+                                  : const Color(0xFFFF9800),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _hasProfilePhoto()
+                                  ? 'Foto Profile Aktif'
+                                  : 'Belum Ada Foto',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _hasProfilePhoto()
+                                    ? const Color(0xFF4CAF50)
+                                    : const Color(0xFFFF9800),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ],
                         ),
                       ),
+
+                      if (userData != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8F9FA),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              // _buildInfoRow(
+                              //   'User ID',
+                              //   userData!['id'].toString(),
+                              // ),
+                              _buildInfoRow('Username', userData!['username']),
+                              _buildInfoRow(
+                                'Bergabung',
+                                _formatDate(userData!['created_at']),
+                              ),
+                              if (userData!['url_foto'] != null) ...[
+                                _buildInfoRow('Foto Profile', 'Tersedia'),
+                                // _buildInfoRow(
+                                //   'URL Foto',
+                                //   userData!['url_foto'],
+                                // ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 30),
+                const SizedBox(height: 30),
 
-              // Edit Profile Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _navigateToEditProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6BB6FF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                // Edit Profile Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _navigateToEditProfile,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6BB6FF),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.edit),
+                        SizedBox(width: 8),
+                        Text(
+                          'Edit Profile',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.edit),
-                      SizedBox(width: 8),
-                      Text(
-                        'Edit Profile',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Logout Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _showLogoutDialog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                // Logout Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _showLogoutDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.logout),
+                        SizedBox(width: 8),
+                        Text(
+                          'Logout',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.logout),
-                      SizedBox(width: 8),
-                      Text(
-                        'Logout',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  // Helper function untuk build profile image dengan error handling
+  ImageProvider? _buildProfileImage() {
+    final photoUrl = userData?['url_foto'];
+    if (photoUrl != null && photoUrl.toString().isNotEmpty) {
+      return NetworkImage(photoUrl.toString());
+    }
+    return null;
+  }
+
+  // Helper function untuk build profile icon
+  Widget? _buildProfileIcon() {
+    final photoUrl = userData?['url_foto'];
+    if (photoUrl == null || photoUrl.toString().isEmpty) {
+      return const Icon(Icons.person, size: 60, color: Colors.white);
+    }
+    return null;
+  }
+
+  // Helper function untuk cek apakah ada foto profile
+  bool _hasProfilePhoto() {
+    final photoUrl = userData?['url_foto'];
+    return photoUrl != null && photoUrl.toString().isNotEmpty;
   }
 
   Widget _buildInfoRow(String label, String value) {
@@ -305,9 +446,57 @@ class _ProfilePageState extends State<ProfilePage> {
       return dateString;
     }
   }
+
+  Future<void> _showLogoutDialog() async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Apakah Anda yakin ingin logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _handleLogout();
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleLogout() async {
+    final loginController = LoginController();
+    await loginController.handleLogout(context);
+  }
+
+  void _navigateToEditProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditProfilePage(userData: userData),
+      ),
+    ).then((_) {
+      // Refresh data setelah kembali dari edit
+      _loadUserData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _profileController.dispose();
+    _isUploading.dispose();
+    _isRefreshing.dispose();
+    super.dispose();
+  }
 }
 
-// Edit Profile Page
+// Edit Profile Page dengan foto upload juga
 class EditProfilePage extends StatefulWidget {
   final Map<String, dynamic>? userData;
 
@@ -321,6 +510,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final ProfileController _profileController = ProfileController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final ValueNotifier<bool> _isLoading = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _isUploading = ValueNotifier<bool>(false);
   bool _showPassword = false;
 
   @override
@@ -331,16 +521,39 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   void _initializeForm() {
     if (widget.userData != null) {
-      _profileController.namaLengkapController.text = widget.userData!['nama_lengkap'] ?? '';
-      _profileController.usernameController.text = widget.userData!['username'] ?? '';
+      _profileController.namaLengkapController.text =
+          widget.userData!['nama_lengkap'] ?? '';
+      _profileController.usernameController.text =
+          widget.userData!['username'] ?? '';
     }
   }
 
   Future<void> _handleUpdateProfile() async {
-    final success = await _profileController.updateProfile(context, _formKey, _isLoading);
-    
+    final success = await _profileController.updateProfile(
+      context,
+      _formKey,
+      _isLoading,
+    );
+
     if (success) {
       Navigator.pop(context); // Kembali ke profile page
+    }
+  }
+
+  // Tambahkan fungsi upload foto di edit page juga
+  Future<void> _handleUploadPhoto() async {
+    final success = await _profileController.uploadPhoto(context, _isUploading);
+
+    if (success) {
+      // Refresh widget userData jika perlu
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Foto berhasil diupload! Kembali ke profile untuk melihat perubahan.',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
@@ -348,6 +561,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void dispose() {
     _profileController.dispose();
     _isLoading.dispose();
+    _isUploading.dispose();
     super.dispose();
   }
 
@@ -369,38 +583,63 @@ class _EditProfilePageState extends State<EditProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar Section
+                // Avatar Section dengan upload foto
                 Center(
                   child: Stack(
                     children: [
-                      const CircleAvatar(
+                      CircleAvatar(
                         radius: 60,
-                        backgroundColor: Color(0xFF6BB6FF),
-                        child: Icon(
-                          Icons.person,
-                          size: 70,
-                          color: Colors.white,
-                        ),
+                        backgroundColor: const Color(0xFF6BB6FF),
+                        backgroundImage: widget.userData?['url_foto'] != null
+                            ? NetworkImage(widget.userData!['url_foto'])
+                            : null,
+                        child: widget.userData?['url_foto'] == null
+                            ? const Icon(
+                                Icons.person,
+                                size: 70,
+                                color: Colors.white,
+                              )
+                            : null,
                       ),
                       Positioned(
                         bottom: 0,
                         right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 5,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            size: 20,
-                            color: Color(0xFF6BB6FF),
+                        child: GestureDetector(
+                          onTap: _handleUploadPhoto,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 5,
+                                ),
+                              ],
+                            ),
+                            child: ValueListenableBuilder<bool>(
+                              valueListenable: _isUploading,
+                              builder: (context, isUploading, child) {
+                                return isUploading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Color(0xFF6BB6FF),
+                                              ),
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.camera_alt,
+                                        size: 20,
+                                        color: Color(0xFF6BB6FF),
+                                      );
+                              },
+                            ),
                           ),
                         ),
                       ),
@@ -495,7 +734,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text(
@@ -595,7 +836,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
         ),
       ),
     );

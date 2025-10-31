@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io'; // Untuk file handling
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart'; // Tambahkan dependency image_picker
 import '../controller/loginController.dart';
 
 class ProfileController {
@@ -30,14 +32,23 @@ class ProfileController {
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
-          return data; // Langsung return response tanpa 'data' wrapper
+          
+          // Update session dengan data terbaru dari server
+          await loginController.saveLoginSession(
+            token: 'current_token_${DateTime.now().millisecondsSinceEpoch}',
+            username: data['username'],
+            userData: data,
+          );
+          
+          return data;
         }
       }
       
       return userData; // Fallback ke session data
     } catch (e) {
       print('Error getting user data: $e');
-      return null;
+      final loginController = LoginController();
+      return await loginController.getUserData(); // Return session data jika error
     }
   }
 
@@ -167,6 +178,104 @@ class ProfileController {
           ),
         );
       }
+
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Upload foto ke server
+  Future<bool> uploadPhoto(BuildContext context, ValueNotifier<bool> isLoading) async {
+    final picker = ImagePicker();
+
+    try {
+      // Pilih foto dari galeri
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+      if (pickedFile == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak ada foto yang dipilih'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return false;
+      }
+
+      isLoading.value = true;
+
+      final loginController = LoginController();
+      final currentUserData = await loginController.getUserData();
+
+      if (currentUserData == null || currentUserData['id'] == null) {
+        throw Exception('User data tidak ditemukan');
+      }
+
+      final userId = currentUserData['id'];
+      final file = File(pickedFile.path);
+
+      // Update endpoint sesuai dengan Laravel routes
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://monitoringweb.decoratics.id/api/bencana/pengguna/$userId/upload-photo'), // Update endpoint
+      );
+
+      request.files.add(await http.MultipartFile.fromPath('photo', file.path));
+      request.headers.addAll({
+        'Accept': 'application/json',
+        'Content-Type': 'multipart/form-data',
+      });
+
+      print('Upload Photo URL: https://monitoringweb.decoratics.id/api/bencana/pengguna/$userId/upload-photo');
+      print('File path: ${file.path}');
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      print('Upload Photo Response: ${response.statusCode}');
+      print('Response Body: $responseBody');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(responseBody);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto berhasil diupload'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        return true;
+      } else {
+        final responseData = jsonDecode(responseBody);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(responseData['error'] ?? responseData['message'] ?? 'Upload gagal'),
+            backgroundColor: Colors.red,
+          ),
+        );
+
+        return false;
+      }
+    } catch (e) {
+      print('Error uploading photo: $e');
+
+      String errorMessage = 'Error upload foto';
+      
+      if (e.toString().contains('SocketException')) {
+        errorMessage = 'Tidak ada koneksi internet';
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = 'Upload timeout, coba lagi';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
 
       return false;
     } finally {

@@ -25,6 +25,7 @@ dependencies:
   url_launcher: ^6.3.2
   intl: ^0.20.2
   timezone: ^0.10.1
+  image_picker: ^1.2.0
 
 dev_dependencies:
   flutter_test:
