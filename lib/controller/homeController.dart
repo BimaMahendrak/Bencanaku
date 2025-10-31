@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
+import '../utils/timezoneHelper.dart';
+import 'dart:async';
 
 class HomeController {
   final ValueNotifier<List<Map<String, dynamic>>> gempaData = ValueNotifier([]);
@@ -10,6 +12,47 @@ class HomeController {
   final ValueNotifier<String> userCity = ValueNotifier('');
   final ValueNotifier<int> gempaWeeklyCount = ValueNotifier(0);
   final ValueNotifier<List<Map<String, dynamic>>> gempaWeeklyData = ValueNotifier([]);
+
+  // Tambahkan ValueNotifier untuk timezone
+  final ValueNotifier<String> currentTimezone = ValueNotifier<String>('Asia/Jakarta');
+  final ValueNotifier<DateTime> currentTime = ValueNotifier<DateTime>(DateTime.now());
+  final ValueNotifier<String> greeting = ValueNotifier<String>('Selamat Siang');
+  
+  Timer? _timeTimer;
+
+  HomeController() {
+    // Initialize timezone
+    TimezoneHelper.initialize();
+    
+    // Start real-time clock
+    _startClock();
+  }
+
+  /// Mulai clock real-time yang update setiap detik
+  void _startClock() {
+    _timeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      final now = TimezoneHelper.getCurrentTime(currentTimezone.value);
+      currentTime.value = now;
+      greeting.value = TimezoneHelper.getGreeting(now);
+    });
+  }
+
+  /// Update timezone berdasarkan lokasi user
+  void updateTimezoneFromLocation(Position position) {
+    final timezone = TimezoneHelper.detectTimezone(
+      position.latitude, 
+      position.longitude,
+    );
+    
+    currentTimezone.value = timezone;
+    
+    // Update current time immediately
+    final now = TimezoneHelper.getCurrentTime(timezone);
+    currentTime.value = now;
+    greeting.value = TimezoneHelper.getGreeting(now);
+    
+    print('Timezone updated to: $timezone');
+  }
 
   Future<void> fetchGempaData() async {
     try {
@@ -129,14 +172,15 @@ class HomeController {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // Mengupdate ValueNotifier untuk posisi
       userLocation.value = position;
-
+      
+      // Auto-detect timezone berdasarkan lokasi
+      updateTimezoneFromLocation(position);
+      
       // Ambil nama kota dari koordinat menggunakan API
       await _getCityFromCoordinatesAPI(position.latitude, position.longitude);
     } catch (e) {
-      debugPrint('Error fetching user location: $e');
-      userCity.value = 'Lokasi tidak diketahui';
+      print('Error getting location: $e');
     }
   }
 
@@ -198,6 +242,7 @@ class HomeController {
   }
 
   void dispose() {
+    _timeTimer?.cancel();
     gempaData.dispose();
     userLocation.dispose();
     userCity.dispose();

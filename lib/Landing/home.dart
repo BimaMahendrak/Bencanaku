@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import '../controller/homeController.dart';
+import '../utils/timezoneHelper.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -47,27 +49,70 @@ class _HomepageState extends State<Homepage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        username != null ? 'Hai, $username' : 'Hai, Selamat Siang',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C3E50),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Greeting berdasarkan waktu
+                        ValueListenableBuilder<String>(
+                          valueListenable: _homeController.greeting,
+                          builder: (context, greetingText, child) {
+                            return Text(
+                              username != null ? '$greetingText, $username' : greetingText,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2C3E50),
+                              ),
+                            );
+                          },
                         ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Jangan Lupa Istirahat',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF7F8C8D),
+                        const SizedBox(height: 4),
+                        
+                        // Real-time clock dengan timezone
+                        ValueListenableBuilder<DateTime>(
+                          valueListenable: _homeController.currentTime,
+                          builder: (context, currentTime, child) {
+                            return ValueListenableBuilder<String>(
+                              valueListenable: _homeController.currentTimezone,
+                              builder: (context, timezone, child) {
+                                String timeString = TimezoneHelper.formatTimeWithTimezone(
+                                  currentTime, 
+                                  timezone,
+                                );
+                                
+                                return Text(
+                                  timeString,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF7F8C8D),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
-                      ),
-                    ],
+                        
+                        // Tanggal lengkap
+                        ValueListenableBuilder<DateTime>(
+                          valueListenable: _homeController.currentTime,
+                          builder: (context, currentTime, child) {
+                            String dateString = DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(currentTime);
+                            return Text(
+                              dateString,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF7F8C8D),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
+                  
+                  // Location widget (existing)
                   ValueListenableBuilder<String>(
                     valueListenable: _homeController.userCity,
                     builder: (context, cityName, child) {
@@ -87,21 +132,40 @@ class _HomepageState extends State<Homepage> {
                             ),
                           ],
                         ),
-                        child: Row(
+                        child: Column(
                           children: [
-                            const Icon(
-                              Icons.location_on_outlined,
-                              color: Color(0xFF6BB6FF),
-                              size: 16,
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.location_on_outlined,
+                                  color: Color(0xFF6BB6FF),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  cityName.isEmpty ? 'Mencari lokasi...' : cityName,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF2C3E50),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              cityName.isEmpty ? 'Mencari lokasi...' : cityName,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF2C3E50),
-                              ),
+                            // Timezone indicator
+                            ValueListenableBuilder<String>(
+                              valueListenable: _homeController.currentTimezone,
+                              builder: (context, timezone, child) {
+                                String tzName = TimezoneHelper.getIndonesianTimezoneName(timezone);
+                                return Text(
+                                  tzName,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF6BB6FF),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -341,7 +405,7 @@ class _HomepageState extends State<Homepage> {
                         ),
                       ],
                     ),
-                  );
+                    );
                 },
               ),
 
@@ -583,7 +647,7 @@ class _HomepageState extends State<Homepage> {
                         ),
                       ],
                     ),
-                  );
+                    );
                 },
               ),
 

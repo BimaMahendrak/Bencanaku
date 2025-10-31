@@ -208,7 +208,7 @@ $googleMapsUrl
 🕐 Waktu: $timestamp
 📱 Dikirim dari Aplikasi BencanaKu
 
-#Darurat #BencanaKu #ButuhBantuan
+
 """;
 
       // Bagikan melalui sistem sharing bawaan
