@@ -47,7 +47,7 @@ class _LoginPageState extends State<LoginPage> {
                   
                   // Title dan Subtitle
                   const Text(
-                    'BENCANAKU12',
+                    'BENCANAKU',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,

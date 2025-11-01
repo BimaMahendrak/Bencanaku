@@ -4,9 +4,9 @@ import '../controller/loginController.dart';
 import '../controller/profileController.dart';
 import 'notificationTest.dart';
 import 'editProfile.dart';
+import 'kesanpesan.dart'; // Import halaman kesan pesan
 import 'widgets/profileHeader.dart';
 import 'widgets/profileCard.dart';
-import 'widgets/profileButtons.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -90,6 +90,15 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  void _navigateToKesanPesan() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const KesanPesanPage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -122,16 +131,193 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 const SizedBox(height: 30),
 
-                // Action Buttons
-                ProfileButtons(
-                  onNotificationTest: _navigateToNotificationTest,
-                  onEditProfile: _navigateToEditProfile,
-                  onLogout: _handleLogout,
-                ),
+                // Menu Options - GANTI BUTTON JADI MENU
+                _buildMenuSection(),
+
+                const SizedBox(height: 30),
+
+                // Logout Button - TETAP TERPISAH
+                _buildLogoutButton(),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMenuSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Menu',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Edit Profile
+          _buildMenuItem(
+            icon: Icons.edit,
+            title: 'Edit Profile',
+            subtitle: 'Ubah informasi profile Anda',
+            color: const Color(0xFF6BB6FF),
+            onTap: _navigateToEditProfile,
+          ),
+
+          const SizedBox(height: 12),
+
+          // Test Notifikasi
+          _buildMenuItem(
+            icon: Icons.notifications_active,
+            title: 'Test Notifikasi',
+            subtitle: 'Uji coba sistem peringatan darurat',
+            color: const Color(0xFFFF9800),
+            onTap: _navigateToNotificationTest,
+          ),
+
+          const SizedBox(height: 12),
+
+          // Kesan & Pesan
+          _buildMenuItem(
+            icon: Icons.favorite,
+            title: 'Kesan & Pesan',
+            subtitle: 'Refleksi pengembangan aplikasi',
+            color: const Color(0xFFE91E63),
+            onTap: _navigateToKesanPesan,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: color.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2C3E50),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.grey[400],
+                size: 16,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () => _showLogoutDialog(),
+        icon: const Icon(Icons.logout),
+        label: const Text('Logout'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showLogoutDialog() async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Apakah Anda yakin ingin logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _handleLogout();
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
